@@ -1,0 +1,46 @@
+backend/
+│
+├── main.py
+├── database.py
+├── models.py
+├── requirements.txt
+├── pyproject.toml
+└── .env
+
+
+
+
+Responsibility of Each File
+File	                   Responsibility
+main.py	           	FastAPI app + routes + in-memory state
+database.py	   	Engine + Session + Base
+models.py	   	ORM models/tables
+.env	           	Database URL
+requirements.txt	Dependencies
+
+
+
+
+
+main.py
+│
+├── FastAPI App
+├── Routes
+├── In-memory State
+│
+├── imports User model
+│        ↓
+models.py
+│
+├── User Table
+├── Order Table
+│
+├── imports Base
+│        ↓
+database.py
+│
+├── Engine
+├── SessionLocal
+├── Base
+│
+└── PostgreSQL

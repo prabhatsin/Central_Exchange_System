@@ -1,0 +1,7 @@
+SQLAlchemy
+dotenv
+psycopg2-binary
+eralchemy2  #table visualization library 
+fastapi[standard]
+Uvicorn
+pydantic[email]
