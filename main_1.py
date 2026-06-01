@@ -2,8 +2,23 @@ from fastapi import FastAPI
 
 app = FastAPI()
 
-BALANCES = {
+# BALANCES = {
 
+# }
+
+BALANCES = {
+    1: {
+        "availableBalance": 100000,
+        "lockedBalance": 0
+    },
+    2: {
+        "availableBalance": 50000,
+        "lockedBalance": 10000
+    },
+    3: {
+        "availableBalance": 75000,
+        "lockedBalance": 5000
+    }
 }
 
 ORDERBOOKS = {

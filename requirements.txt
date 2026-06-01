@@ -5,3 +5,4 @@ eralchemy2  #table visualization library
 fastapi[standard]
 Uvicorn
 pydantic[email]
+sortedcontainers

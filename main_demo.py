@@ -21,10 +21,10 @@ class UserSignin(BaseModel):
 #     USERS[user.username]={'password':user.password}
 #     print(USERS)
 #     return {"message":"User created suceesfully"}
-#?---------------------------------------------------------
+# # ?---------------------------------------------------------
 # user: UserSignup , is a type hint.
 # It tells FastAPI:
-#"Incoming request body should be converted into a UserSignup object.
+# "Incoming request body should be converted into a UserSignup object.
 
 @app.get("/")
 def home():
