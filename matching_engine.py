@@ -18,8 +18,8 @@
 
 #     }
 # }
-
-
+#! TODO : MAKE A VISIBLE GRAPH OF THE MATCHING ENGINE , IN TREE FORMAT OR OTHER FORMATS EXPLORE 
+#! There are other ways to fill the orderbook other than FIFO , explore them 
 '''
 What is a deque?
 deque = Double Ended Queue
@@ -60,7 +60,9 @@ orderbook = {
         "bids": {
             "price_map": {
                 67100: deque([
-                    { "order_id": 4, "user_id": 102, "qty": 0.5, "filled_qty": 0 },
+                    { "order_id": 4, "user_id": 102, "qty": 0.5, "filled_qty": 0.1 },
+                    { "order_id": 11, "user_id": 305, "qty": 1.0, "filled_qty": 0 },
+                    { "order_id": 15, "user_id": 408, "qty": 0.3, "filled_qty": 0 },
                 ]),
                 67050: deque([
                     { "order_id": 5, "user_id": 201, "qty": 1.2, "filled_qty": 0 },
@@ -82,51 +84,56 @@ incoming_request={
 }
 # Note: I m confused that the incoming request will be a json or 
 # an request body object wala
+#? We have ton manually implement FIFO Structure in the Machine engine 
+#? I.e  filled_qty section will get filled in order in which thet appeqar in  orderbook 
+#? Consider the bids section price 67100 it has thrtee orders so whenever 
+#? Someone comes to sell first all of userId 102 will get filled then , then userId 305 then 408 and ... 
+# ? It should not happen that 
 def match(incoming_request,orderbook):
     # step1: Access the orderbook of that particular asset
     asset_name=incoming_request["symbol"]
-    orderbook_current_asset=orderbook[asset_name]
+    asset_book=orderbook[asset_name]
+    bid_portion=asset_book["bids"]
+    ask_portion=asset_book["asks"]
     # print(orderbook_current_asset )
     if incoming_request["type"]=="MARKET":
-        if incoming_request["side"]=="SELL":
-            bid_portion=orderbook_current_asset["bids"]
-            bid_portion["sorted_prices"]=SortedList(bid_portion["price_map"].keys(),key=lambda x: -x)
-            best_price=bid_portion["sorted_prices"][0]
-            # This gives a list of orders corresponding to the best price       
-            order_best_price=bid_portion["price_map"][best_price]
-            for order in order_best_price :
-                print(order)
-                avail_qty=order["qty"]
-                print(avail_qty)
-                requested_qty=incoming_request["qty"]
-                net_qty=avail_qty-requested_qty
+        #! We modifies andn play around with the bid portion if side is SELL 
+        # In this part u are assigning the values to initial empty soreted price object 
+        bid_portion["sorted_prices"]=SortedList(bid_portion["price_map"].keys(),key=lambda x: -x)
+        best_price=bid_portion["sorted_prices"][0]
+        # This gives a list of orders corresponding to the best price       
+        orderList_best_price=bid_portion["price_map"][best_price]
+        for order in orderList_best_price :
+            # print(order)
+            order_id=order["order_id"]
+            # This gives available qty for this particular order_id
+            remain_qty=order["qty"]-order["filled_qty"] # This is the quantiy which needs to be filled for the user to moove out of orderbook
+            # print(avail_qty)
+            requested_qty=incoming_request["qty"]  # This is the quantity to be sold 
+            trade_qty=min(remain_qty,requested_qty)
+            if remain_qty<requested_qty:
+            # In this case the order will get completed but this particular maker wont move out of order book
+                trade_qty=remain_qty
 
-                if net_qty>=0: 
-                    #! This one  Bidder wants to buy all of the requested asset @ this highest price
-
-                    # trade will happen i.e 
-                    # The quantity of asset of this userid shouold increase 
-                    # Balance should deduct and move to this req wala user
-
-
-                    pass
-                elif net_qty<0: 
-                    #! This one  Bidder wants to buy all of the requested asset @ this highest price
-                    # Move to next bidder with different user id and order id 
-
-                    continue 
-                    # apply the infinite loop till the time assets are sold or 
-                    # Since its a market order eventuallyb it will get sold 
-    
-            # print(order_best_price)
-            # avail_quantity=order_best_price['qty']
-            # print(avail_quantity)
-            # print(order_best_price)
-
-            # Get the list of sorted price in descending 
-            return None
-          
-
+                #This trade part is used to update the fills table 
+                trade_record={
+                    "price":best_price,
+                    "qty" : trade_qty,
+                    "maker_id":order["user_id"],
+                    "taker_id":incoming_request["userId"]
+                        }
+            
+            # upgrade the  the filled qty of this order id by filled+trade_qty
+            order["filled_qty"]=order["filled_qty"]+trade_qty
+            print("This is the Order ",order)
+            if remain_qty==0:
+                removed_item=order.popleft()
+                print(type(removed_item))
+                print("Item to be removed",removed_item)
+                
+            # print(remain_qty)
+            break 
+                
             
 match(incoming_request,orderbook)
 
