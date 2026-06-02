@@ -48,11 +48,11 @@ orderbook = {
             "price_map": {
                 # price → deque of individual orders
                 67200: deque([
-                    { "order_id": 1, "user_id": 101, "qty": 1.0, "filled_qty": 0 },
-                    { "order_id": 2, "user_id": 205, "qty": 1.5, "filled_qty": 0 },
+                    { "order_id": 1, "user_id": 101, "qty": 10, "filled_qty": 0 },
+                    { "order_id": 2, "user_id": 205, "qty": 15, "filled_qty": 0 },
                 ]),
                 67250: deque([
-                    { "order_id": 3, "user_id": 309, "qty": 0.8, "filled_qty": 0 },
+                    { "order_id": 3, "user_id": 309, "qty": 8, "filled_qty": 0 },
                 ]),
             },
             "sorted_prices": SortedList()  # [67200, 67250] ASC → best ask at index 0
@@ -60,12 +60,12 @@ orderbook = {
         "bids": {
             "price_map": {
                 67100: deque([
-                    { "order_id": 4, "user_id": 102, "qty": 0.5, "filled_qty": 0.1 },
-                    { "order_id": 11, "user_id": 305, "qty": 1.0, "filled_qty": 0 },
-                    { "order_id": 15, "user_id": 408, "qty": 0.3, "filled_qty": 0 },
+                    { "order_id": 4, "user_id": 102, "qty": 5, "filled_qty": 0 },
+                    { "order_id": 11, "user_id": 305, "qty": 6, "filled_qty": 0 },
+                    { "order_id": 15, "user_id": 408, "qty": 3, "filled_qty": 0 },
                 ]),
                 67050: deque([
-                    { "order_id": 5, "user_id": 201, "qty": 1.2, "filled_qty": 0 },
+                    { "order_id": 5, "user_id": 201, "qty": 12, "filled_qty": 0 },
                 ]),
             },
             "sorted_prices": SortedList(key=lambda x: -x)  # [67100, 67050] DESC → best bid at index 0
@@ -79,7 +79,7 @@ incoming_request={
 "symbol": 'AXIS',
 "side": 'SELL',
 "type": 'MARKET',
-"qty": 2,
+"qty": 19,
 "price":None
 }
 # Note: I m confused that the incoming request will be a json or 
@@ -95,46 +95,68 @@ def match(incoming_request,orderbook):
     asset_book=orderbook[asset_name]
     bid_portion=asset_book["bids"]
     ask_portion=asset_book["asks"]
-    # print(orderbook_current_asset )
+           # In this part u are assigning the values to initial empty soreted price object 
+    bid_portion["sorted_prices"]=SortedList(bid_portion["price_map"].keys(),key=lambda x: -x)
     if incoming_request["type"]=="MARKET":
         #! We modifies andn play around with the bid portion if side is SELL 
-        # In this part u are assigning the values to initial empty soreted price object 
-        bid_portion["sorted_prices"]=SortedList(bid_portion["price_map"].keys(),key=lambda x: -x)
-        best_price=bid_portion["sorted_prices"][0]
-        # This gives a list of orders corresponding to the best price       
-        orderList_best_price=bid_portion["price_map"][best_price]
-        for order in orderList_best_price :
-            # print(order)
-            order_id=order["order_id"]
-            # This gives available qty for this particular order_id
-            remain_qty=order["qty"]-order["filled_qty"] # This is the quantiy which needs to be filled for the user to moove out of orderbook
-            # print(avail_qty)
-            requested_qty=incoming_request["qty"]  # This is the quantity to be sold 
-            trade_qty=min(remain_qty,requested_qty)
-            if remain_qty<requested_qty:
-            # In this case the order will get completed but this particular maker wont move out of order book
-                trade_qty=remain_qty
+        # This gives a list of orders corresponding to the best price 
+        requested_qty=incoming_request["qty"] 
+        orders_to_update= []   #? This will be used to update orders db later 
+        trades_executed = []   #? This will be used to updatwe fills table 
+        while len(bid_portion["sorted_prices"]) >0:
+            best_price=bid_portion["sorted_prices"][0]
+            orderList_best_price=bid_portion["price_map"][best_price]
+            
+            while len(orderList_best_price)>0:
 
-                #This trade part is used to update the fills table 
+                order=orderList_best_price[0]
+                # print("The order value is ",order)
+                order_id=order["order_id"]
+                remain_qty=order["qty"]-order["filled_qty"]
+                trade_qty=min(remain_qty,requested_qty)
                 trade_record={
                     "price":best_price,
                     "qty" : trade_qty,
                     "maker_id":order["user_id"],
+
                     "taker_id":incoming_request["userId"]
                         }
+                trades_executed.append(trade_record)
+                order["filled_qty"]=order["filled_qty"]+trade_qty
+                remain_qty_after=order["qty"]-order["filled_qty"]
+                # Upgrade the incoming_request["qty"]
+                requested_qty=requested_qty-trade_qty
+                # print("The left out part of ",requested_qty)
+                # print(trades_executed)
+                if remain_qty_after==0:
+                    removed_item=orderList_best_price.popleft()
+
+                    orders_to_update.append(removed_item)
+
+                else:
+                    pass 
+                    # Write a else condition for partial fill status update 
+
+        
             
-            # upgrade the  the filled qty of this order id by filled+trade_qty
-            order["filled_qty"]=order["filled_qty"]+trade_qty
-            print("This is the Order ",order)
-            if remain_qty==0:
-                removed_item=order.popleft()
-                print(type(removed_item))
-                print("Item to be removed",removed_item)
+                #! Stop the loop if all of incoming_request['qty'] is sold 
+                if requested_qty==0:
+                    #? use this condition in the along with the whiole loop better approach 
+                    print("The loop breaks here --------")
+                    break
+            print("Final Value of requested qty",requested_qty)
+            print("My final order update is",orders_to_update)
+            # print("Final trade record",trades_executed)
+            print(orderList_best_price)
+            del bid_portion["price_map"][best_price]
+            bid_portion["sorted_prices"].discard(best_price)
                 
-            # print(remain_qty)
-            break 
-                
+
+        
+
+        
             
+
 match(incoming_request,orderbook)
 
 
