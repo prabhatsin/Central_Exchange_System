@@ -179,6 +179,24 @@ def match(incoming_request,orderbook):
 match(incoming_request,orderbook)
 
 
+'''
+#! Balance update ????????????? 
+how exactly is theb Balance part getting updated or effected ??? 
+
+'''
+
+'''
+
+Additional order types you may need to consider:
+
+Cancel Order — not a new order but a core operation your engine must handle
+IOC (Immediate or Cancel) — Limit order but unfilled portion is cancelled instantly
+FOK (Fill or Kill) — must fill completely or cancel entirely, no partial fills
+Post Only — Limit order that is rejected if it would match immediately (maker only)
+
+'''
+
+
 
 
 
